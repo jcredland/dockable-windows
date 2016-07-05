@@ -77,7 +77,7 @@ void DockableWindowManager::placeComponent(DockableComponent* component, const P
 	divorceComponentFromParent(component);
 
 	if (highlightedDock)
-		highlightedDock->stopShowingComponentPlacement();
+		highlightedDock->hideDockableComponentPlacement();
 
 	highlightedDock = nullptr;
 
@@ -86,7 +86,7 @@ void DockableWindowManager::placeComponent(DockableComponent* component, const P
 	if (!targetDock)
 		createHeavyWeightWindow(component, screenPosition);
 	else
-		targetDock->addDockableComponent(component, screenPosition);
+		targetDock->attachDockableComponent(component, screenPosition);
 
 }
 
@@ -102,7 +102,7 @@ void DockableWindowManager::showTargetPosition(DockableComponent * componentBein
 		dock->showDockableComponentPlacement(componentBeingDragged, location);
 
 		if (dock != highlightedDock && highlightedDock)
-			highlightedDock->stopShowingComponentPlacement();
+			highlightedDock->hideDockableComponentPlacement();
 
 		highlightedDock = dock;
 	}
@@ -197,13 +197,13 @@ void WindowDockVertical::addComponentToDock(DockableComponent* comp)
 void WindowDockVertical::resized()
 {
 	auto windowHeight = 110;
-	auto bounds = getLocalBounds();
+	auto area = getLocalBounds();
 
 	for (auto d : dockedComponents)
 	{
 		// intelligent resize code codes here
-		d->setBounds(bounds.withHeight(windowHeight));
-		bounds.translate(0, windowHeight);
+		d->setBounds(area.withHeight(windowHeight));
+		area.translate(0, windowHeight);
 	}
 }
 
@@ -214,7 +214,7 @@ void WindowDockVertical::paint(Graphics& g)
 	if (highlight)
 	{
 		g.setColour(Colours::red);
-		g.drawRect(getLocalBounds(), 2.0f);
+		g.drawRect(getLocalBounds(), 2);
 	}
 }
 
@@ -227,19 +227,19 @@ void WindowDockVertical::detachDockableComponent(DockableComponent* component)
 	dockedComponents.removeAllInstancesOf(component);
 }
 
-void WindowDockVertical::stopShowingComponentPlacement()
+void WindowDockVertical::hideDockableComponentPlacement()
 {
 	highlight = false;
 	repaint();
 }
 
-void WindowDockVertical::showDockableComponentPlacement(DockableComponent* component, Point<int> screenPosition)
+void WindowDockVertical::showDockableComponentPlacement(DockableComponent*, Point<int>)
 {
 	highlight = true;
 	repaint();
 }
 
-bool WindowDockVertical::addDockableComponent(DockableComponent* component, Point<int> screenPosition)
+bool WindowDockVertical::attachDockableComponent(DockableComponent* component, Point<int>)
 {
 	addAndMakeVisible(component);
 	dockedComponents.add(component);
@@ -253,7 +253,7 @@ MainContentComponent::MainContentComponent()
 {
 	setSize(600, 400);
 	addAndMakeVisible(dock);
-	dock.addComponentToDock(new ExampleDockableWindow(dockManager));
+	dock.addComponentToDock(new ExampleDockableComponent(dockManager));
 }
 
 MainContentComponent::~MainContentComponent()
@@ -267,6 +267,6 @@ void MainContentComponent::paint(Graphics& g)
 
 void MainContentComponent::resized()
 {
-	auto bounds = getLocalBounds();
-	dock.setBounds(bounds.withWidth(150));
+	auto area = getLocalBounds();
+	dock.setBounds(area.withWidth(150));
 }

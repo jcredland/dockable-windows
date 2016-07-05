@@ -25,25 +25,33 @@ public:
 	Called when the dragging has stopped or moved away from the component and we don't need to show
 	the highlighted position any more.  
 	*/
-	virtual void stopShowingComponentPlacement() = 0;
+	virtual void hideDockableComponentPlacement() = 0;
 	/** 
 	Called when the user drags a window over the dock and releases the mouse, use this to place the 
 	window into the dock.  Return false if the DockableComponent cannot be added, and a new window will be
 	created instead.
 	*/
-	virtual bool addDockableComponent(DockableComponent* component, Point<int> screenPosition) = 0;
+	virtual bool attachDockableComponent(DockableComponent* component, Point<int> screenPosition) = 0;
 	/** 
 	Should remove the component from the dock if it's present, and resize or rearrange any other windows 
 	accordingly.
 	*/
 	virtual void detachDockableComponent(DockableComponent* component) = 0;
 
+	/** 
+	Tests to see if this Dock contains the provided screen position.  Used internally 
+	while drags are in progress. 
+	*/
 	bool containsScreenPosition(const Point<int>& screenPosition) const;
 private:
 	DockableWindowManager & manager;
 	Component* dockComponent;
 };
 
+/**
+The DockableWindowManager controls the attaching and removing of DockableWindow objects from DockBase 
+implementations and top level windows.
+*/
 class DockableWindowManager
 {
 public:
@@ -138,12 +146,15 @@ private:
 };
 
 
-class ExampleDockableWindow
+/**
+A really simple component we can use to test the dragging and docking.
+*/
+class ExampleDockableComponent
 	:
 	public DockableComponent
 {
 public:
-	ExampleDockableWindow(DockableWindowManager& dockableWindowManager)
+	ExampleDockableComponent(DockableWindowManager& dockableWindowManager)
 		: DockableComponent(dockableWindowManager)
 	{}
 
@@ -179,9 +190,9 @@ public:
 
 private:
 	void showDockableComponentPlacement(DockableComponent* component, Point<int> screenPosition) override;
-	bool addDockableComponent(DockableComponent* component, Point<int> screenPosition) override;
+	bool attachDockableComponent(DockableComponent* component, Point<int> screenPosition) override;
 	void detachDockableComponent(DockableComponent* component) override;
-	void stopShowingComponentPlacement() override;
+	void hideDockableComponentPlacement() override;
 
 	bool highlight{ false };
 	Array<DockableComponent *> dockedComponents;
