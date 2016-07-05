@@ -8,24 +8,33 @@ This file was auto-generated!
 
 #include "MainComponent.h"
 
-void DockableWindowManager::createHeavyWeightWindow(DockableComponent * comp)
+void DockableWindowManager::createHeavyWeightWindow(DockableComponent * comp, const Point<int> &screenPosition)
 {
 	auto window = new ResizableWindow(comp->getName(), true);
 	window->setContentNonOwned(comp, true);
+	window->setTopLeftPosition(screenPosition);
 	windows.add(window);
 	window->setVisible(true);
 }
 
-DockBase::DockBase(DockableWindowManager& manager_)
+DockBase::DockBase(DockableWindowManager& manager_, Component * dockComponent_)
 	:
-	manager(manager_)
+	manager(manager_),
+	dockComponent(dockComponent_)
 {
 	manager.addDock(this);
 }
 
+
 DockBase::~DockBase()
 {
 	manager.removeDock(this);
+}
+
+bool DockBase::containsScreenPosition(const Point<int>& screenPosition) const
+{
+	auto screenBounds = dockComponent->getScreenBounds();
+	return screenBounds.contains(screenPosition);
 }
 
 DockableWindowManager::DockableWindowManager()
@@ -42,7 +51,7 @@ void DockableWindowManager::removeDock(DockBase* dockToRemove)
 	docks.removeAllInstancesOf(dockToRemove);
 }
 
-DockableWindowManager::TargetOutline::TargetOutline():
+DockableWindowManager::TargetOutline::TargetOutline() :
 	TopLevelWindow("Temp", true)
 {
 }
@@ -56,42 +65,47 @@ void DockableWindowManager::TargetOutline::paint(Graphics& g)
 
 DockBase* DockableWindowManager::getDockUnderScreenPosition(Point<int> position)
 {
-	for (auto d: docks)
-	{
-		auto c = dynamic_cast<Component *>(d);
-
-		if (c)
-		{
-			auto screenBounds = c->getScreenBounds();
-
-			if (screenBounds.contains(position))
-				return d;
-		}
-		else
-		{
-			jassertfalse; // docks should be components..
-		}
-	}
+	for (auto d : docks)
+		if (d->containsScreenPosition(position))
+			return d;
 
 	return nullptr;
 }
 
-void DockableWindowManager::placeComponent(DockableComponent* component, Point<int> screenPosition)
+void DockableWindowManager::placeComponent(DockableComponent* component, const Point<int> & screenPosition)
 {
 	divorceComponentFromParent(component);
+
+	if (highlightedDock)
+		highlightedDock->stopShowingComponentPlacement();
+
+	highlightedDock = nullptr;
 
 	auto targetDock = getDockUnderScreenPosition(screenPosition);
 
 	if (!targetDock)
-		createHeavyWeightWindow(component);
+		createHeavyWeightWindow(component, screenPosition);
 	else
 		targetDock->addDockableComponent(component, screenPosition);
+
 }
 
-void DockableWindowManager::showTargetPosition(Point<int> location, int w, int h)
+void DockableWindowManager::showTargetPosition(DockableComponent * componentBeingDragged, Point<int> location, int w, int h)
 {
 	if (!targetOutline)
 		targetOutline = new TargetOutline();
+
+	auto dock = getDockUnderScreenPosition(location);
+
+	if (dock)
+	{
+		dock->showDockableComponentPlacement(componentBeingDragged, location);
+
+		if (dock != highlightedDock && highlightedDock)
+			highlightedDock->stopShowingComponentPlacement();
+
+		highlightedDock = dock;
+	}
 
 	targetOutline->setBounds(location.getX(), location.getY(), w, h);
 	targetOutline->setVisible(true);
@@ -104,9 +118,9 @@ void DockableWindowManager::clearTargetPosition()
 
 void DockableWindowManager::divorceComponentFromParent(DockableComponent* component)
 {
-	ResizableWindow* foundWindow{nullptr};
+	ResizableWindow* foundWindow{ nullptr };
 
-	for (auto w: windows)
+	for (auto w : windows)
 	{
 		if (w->getContentComponent() == component)
 			foundWindow = w;
@@ -118,7 +132,7 @@ void DockableWindowManager::divorceComponentFromParent(DockableComponent* compon
 	}
 	else
 	{
-		for (auto d: docks)
+		for (auto d : docks)
 			d->detachDockableComponent(component);
 	}
 }
@@ -138,7 +152,7 @@ void DockableComponent::resized()
 	titleBar->setBounds(getLocalBounds().withHeight(20));
 }
 
-DockableComponentTitleBar::DockableComponentTitleBar(DockableComponent& owner_, DockableWindowManager& manager_):
+DockableComponentTitleBar::DockableComponentTitleBar(DockableComponent& owner_, DockableWindowManager& manager_) :
 	owner(owner_),
 	manager(manager_)
 {
@@ -153,7 +167,7 @@ void DockableComponentTitleBar::paint(Graphics& g)
 void DockableComponentTitleBar::mouseDrag(const MouseEvent& e)
 {
 	auto windowPosition = e.getScreenPosition();
-	manager.showTargetPosition(windowPosition, owner.getWidth(), owner.getHeight());
+	manager.showTargetPosition(&owner, windowPosition, owner.getWidth(), owner.getHeight());
 }
 
 void DockableComponentTitleBar::mouseUp(const MouseEvent& e)
@@ -163,7 +177,8 @@ void DockableComponentTitleBar::mouseUp(const MouseEvent& e)
 }
 
 WindowDockVertical::WindowDockVertical(DockableWindowManager& manager_)
-	: DockBase(manager_),
+	: 
+	DockBase(manager_, this),
 	manager(manager_)
 {
 }
@@ -221,6 +236,7 @@ void WindowDockVertical::stopShowingComponentPlacement()
 void WindowDockVertical::showDockableComponentPlacement(DockableComponent* component, Point<int> screenPosition)
 {
 	highlight = true;
+	repaint();
 }
 
 bool WindowDockVertical::addDockableComponent(DockableComponent* component, Point<int> screenPosition)

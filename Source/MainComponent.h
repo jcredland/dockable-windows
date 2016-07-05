@@ -7,10 +7,13 @@
 class DockableWindowManager;
 class DockableComponent;
 
+/**
+Base for things that can act as docks for DockableComponents 
+*/
 class DockBase
 {
 public:
-	DockBase(DockableWindowManager & manager_);
+	DockBase(DockableWindowManager & manager_, Component * dockComponent);
 
 	virtual ~DockBase();
 	/** 
@@ -35,8 +38,10 @@ public:
 	*/
 	virtual void detachDockableComponent(DockableComponent* component) = 0;
 
+	bool containsScreenPosition(const Point<int>& screenPosition) const;
 private:
 	DockableWindowManager & manager;
+	Component* dockComponent;
 };
 
 class DockableWindowManager
@@ -56,7 +61,7 @@ public:
 	/** 
 	Shows an outline when a component is being dragged. 
 	*/
-	void showTargetPosition(Point<int> location, int w, int h);
+	void showTargetPosition(DockableComponent *, Point<int> location, int w, int h);
 
 	/** 
 	Removes the outline when the mouse is released. 
@@ -81,7 +86,7 @@ public:
 	a dock, a tab or a top level window and attaches the window to the new 
 	component.
 	*/
-	void placeComponent(DockableComponent* component, Point<int> position);
+	void placeComponent(DockableComponent* component, const Point<int> & screenPosition);
 
 
 private:
@@ -89,7 +94,7 @@ private:
 	void addDock(DockBase* newDock);
 	void removeDock(DockBase* dockToRemove);
 
-	void createHeavyWeightWindow(DockableComponent * comp);
+	void createHeavyWeightWindow(DockableComponent * comp, const Point<int> & screenPosition);
 
 	OwnedArray<ResizableWindow> windows;
 	ScopedPointer<TargetOutline> targetOutline;
