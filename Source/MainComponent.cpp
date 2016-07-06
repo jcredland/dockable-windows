@@ -269,14 +269,20 @@ void WindowDockVertical::paintOverChildren(Graphics& g)
 	}
 }
 
-int WindowDockVertical::getPlacementPositionForPoint(Point<int> pointRelativeToComponent) const
+WindowDockVertical::PlacementPosition WindowDockVertical::getPlacementPositionForPoint(Point<int> pointRelativeToComponent) const
 {
 	int result{0};
+	int componentIndex{0};
+
 	auto target = pointRelativeToComponent.getY();
 	auto distance = abs(result - target);
 
+	int count{ 0 };
+
 	for (auto c: dockedComponents)
 	{
+		count++;
+
 		auto compBottom = c->getBounds().getBottom();
 		auto newDistance = abs(compBottom - target);
 
@@ -284,10 +290,11 @@ int WindowDockVertical::getPlacementPositionForPoint(Point<int> pointRelativeToC
 		{
 			result = compBottom;
 			distance = newDistance;
+			componentIndex = count;
 		}
 	}
 
-	return result;
+	return{ result, componentIndex };
 }
 
 void WindowDockVertical::startDockableComponentDrag(DockableComponent* component)
@@ -314,14 +321,16 @@ void WindowDockVertical::hideDockableComponentPlacement()
 void WindowDockVertical::showDockableComponentPlacement(DockableComponent*, Point<int> position)
 {
 	highlight = true;
-	highlightYPosition = getPlacementPositionForPoint(getLocalPoint(nullptr, position));
+	auto pos = getPlacementPositionForPoint(getLocalPoint(nullptr, position));
+	highlightYPosition = pos.yPosition;
 	repaint();
 }
 
-bool WindowDockVertical::attachDockableComponent(DockableComponent* component, Point<int>)
+bool WindowDockVertical::attachDockableComponent(DockableComponent* component, Point<int> position)
 {
 	addAndMakeVisible(component);
-	dockedComponents.add(component);
+	auto pos = getPlacementPositionForPoint(getLocalPoint(nullptr, position));
+	dockedComponents.insert(pos.insertAfterComponentIndex, component);
 	resized();
 	return true;
 }

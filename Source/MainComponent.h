@@ -225,8 +225,13 @@ public:
 	void paintOverChildren(Graphics& g) override;
 
 private:
+	struct PlacementPosition
+	{
+		int yPosition;
+		int insertAfterComponentIndex;
+	};
 	/** Finds the nearest top or bottom edge of an existing component to the mouse Y position */
-	int getPlacementPositionForPoint(Point<int> pointRelativeToComponent) const;
+	PlacementPosition getPlacementPositionForPoint(Point<int> pointRelativeToComponent) const;
 
 	void startDockableComponentDrag(DockableComponent* component) override;
 	void showDockableComponentPlacement(DockableComponent* component, Point<int> screenPosition) override;
