@@ -26,6 +26,12 @@ public:
 	the highlighted position any more.  
 	*/
 	virtual void hideDockableComponentPlacement() = 0;
+	/**
+	Mark or otherwise show that the component is being moved from the dock.    E.g. by making the component
+	grey or invisible.   If the user decides not to drag the component after all attachDockableComponent 
+	will be called.  
+	*/
+	virtual void startDockableComponentDrag(DockableComponent* component) = 0;
 	/** 
 	Called when the user drags a window over the dock and releases the mouse, use this to place the 
 	window into the dock.  Return false if the DockableComponent cannot be added, and a new window will be
@@ -43,6 +49,8 @@ public:
 	while drags are in progress. 
 	*/
 	bool containsScreenPosition(const Point<int>& screenPosition) const;
+
+	bool isUsingComponent(Component * c) const { return dockComponent == c; }
 private:
 	DockableWindowManager & manager;
 	Component* dockComponent;
@@ -62,14 +70,19 @@ public:
 		public TopLevelWindow
 	{
 	public:
-		TargetOutline();
+		TargetOutline(Image imageForDraggingWindow);
+
+		//int getDesktopWindowStyleFlags() const override;
 		void paint(Graphics& g) override;
+		Image image;
 	};
 
 	/** 
-	Shows an outline when a component is being dragged. 
+	Shows an outline of the component while it's being dragged, and highlight any 
+	docks the component is dragged over.
 	*/
-	void showTargetPosition(DockableComponent *, Point<int> location, int w, int h);
+	void handleComponentDrag(DockableComponent *, Point<int> location, int w, int h);
+
 
 	/** 
 	Removes the outline when the mouse is released. 
@@ -94,9 +107,17 @@ public:
 	a dock, a tab or a top level window and attaches the window to the new 
 	component.
 	*/
-	void placeComponent(DockableComponent* component, const Point<int> & screenPosition);
+	void handleComponentDragEnd(DockableComponent* component, const Point<int> & screenPosition);
 
 
+	DockBase * getDockBaseForComponent(Component * component) const
+	{
+		for (auto d: docks)
+			if (d->isUsingComponent(component))
+				return d;
+
+		return nullptr;
+	}
 private:
 	friend class DockBase;
 	void addDock(DockBase* newDock);
@@ -108,6 +129,8 @@ private:
 	ScopedPointer<TargetOutline> targetOutline;
 	Array<DockBase *> docks;
 	DockBase * highlightedDock{ nullptr };
+	
+	Component * currentlyDraggedComponent{ nullptr };
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DockableWindowManager)
 };
@@ -115,7 +138,9 @@ private:
 
 class DockableComponentTitleBar;
 
-/** Base class for windows that can be dragged between docks and desktop windows.  */
+/** 
+Base class for windows that can be dragged between docks and desktop windows.  
+*/
 class DockableComponent
 	:
 	public Component
@@ -124,6 +149,12 @@ public:
 	DockableComponent(DockableWindowManager &);
 
 	void resized() override;
+
+	/** 
+	If the component is in a dock this returns the dock it's in.  If it's not in a dock, 
+	or it's a stand alone window this returns nullptr. 
+	*/
+	DockBase* getCurrentDock() const;
 
 	ScopedPointer<DockableComponentTitleBar> titleBar;
 	DockableWindowManager & manager;
@@ -154,15 +185,19 @@ class ExampleDockableComponent
 	public DockableComponent
 {
 public:
-	ExampleDockableComponent(DockableWindowManager& dockableWindowManager)
-		: DockableComponent(dockableWindowManager)
+	ExampleDockableComponent(DockableWindowManager& dockableWindowManager, const Colour &
+		colour_)
+		: DockableComponent(dockableWindowManager), colour(colour_)
 	{}
 
 	void paint(Graphics & g) override
 	{
-		g.fillAll(Colours::blue);
+		g.fillAll(colour);
+		g.setColour(Colours::white);
 		g.drawText("Window Content", getLocalBounds(), Justification::centred, false);
 	}
+
+	Colour colour;
 };
 
 
@@ -180,21 +215,28 @@ public:
 	~WindowDockVertical();
 
 	/** 
-	We assume you are managing the components lifetime.  However an optional change could be to have the 
-	DockManager manage them. 
-	*/
+		We assume you are managing the components lifetime.  However an optional change could be to have the 
+		DockManager manage them. 
+		*/
 	void addComponentToDock(DockableComponent* comp);
 
 	void resized() override;
 	void paint(Graphics& g) override;
+	void paintOverChildren(Graphics& g) override;
 
 private:
+	/** Finds the nearest top or bottom edge of an existing component to the mouse Y position */
+	int getPlacementPositionForPoint(Point<int> pointRelativeToComponent) const;
+
+	void startDockableComponentDrag(DockableComponent* component) override;
 	void showDockableComponentPlacement(DockableComponent* component, Point<int> screenPosition) override;
 	bool attachDockableComponent(DockableComponent* component, Point<int> screenPosition) override;
 	void detachDockableComponent(DockableComponent* component) override;
 	void hideDockableComponentPlacement() override;
 
 	bool highlight{ false };
+	int highlightYPosition{ 0 };
+
 	Array<DockableComponent *> dockedComponents;
 	DockableWindowManager & manager;
 };
