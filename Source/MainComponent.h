@@ -111,6 +111,10 @@ public:
 	*/
 	void handleComponentDragEnd(DockableComponent* component, const Point<int> & screenPosition);
 
+	/** 
+	Creates a DockableComponent.  Use this when writing docks to encapsulate components you are adding 
+	to the docking window system. 
+	*/
 	DockableComponent* createDockableComponent(Component* component);
 
 	/**
@@ -122,11 +126,7 @@ public:
 	/**
 	Brings a specific DockableComponent to the front of any tabbed docks.
 	*/
-	void bringComponentToFront(DockableComponent* dockableComponent)
-	{
-		for (auto d : docks)
-			d->revealComponent(dockableComponent);
-	}
+	void bringComponentToFront(DockableComponent* dockableComponent);
 
 private:
 	friend class DockBase;
@@ -161,6 +161,18 @@ public:
 	DockableComponent(DockableWindowManager &);
 
 	DockableComponent(DockableWindowManager &, Component * contentComponentUnowned);
+
+	/** 
+	This should be somewhere else so the user can do a nice override, maybe it should 
+	be a feature of the DockableWindowManager 
+	*/
+	String getWindowTitle() const
+	{
+		if (contentComponent)
+			return contentComponent->getName();
+
+		return String::empty;
+	}
 
 	void setContentComponentUnowned(Component* content);
 
@@ -250,10 +262,12 @@ class ExampleDockableComponent
 	public Component
 {
 public:
-	ExampleDockableComponent(const Colour & colour_)
+	ExampleDockableComponent(const String & componentName, const Colour & colour_)
 		:
 		colour(colour_)
-	{}
+	{
+		Component::setName(componentName);
+	}
 
 	void paint(Graphics & g) override
 	{
@@ -321,53 +335,10 @@ class TabDock
 	DockBase
 {
 public:
-	TabDock(DockableWindowManager& manager_)
-		:
-		DockBase(manager_, this), 
-		manager(manager_)
-	{}
-
-	void addComponentToDock(Component * comp)
-	{
-		auto dockable = manager.createDockableComponent(comp);
-		dockedComponents.add(dockable);
-		addAndMakeVisible(dockable);
-		resized();
-	}
-
-	void resized() override
-	{
-		auto area = getLocalBounds();
-
-		int x = 0;
-
-		auto lastComponent = getChildComponent(getNumChildComponents() - 1);
-
-		for (auto & c : dockedComponents)
-		{
-			if (c->isVisible())
-			{
-				c->setBounds(area);
-				c->setShowTab(true, x, c == lastComponent);
-				x += 62;
-			}
-		}
-	}
-
-	void paintOverChildren(Graphics & g) override
-	{
-		if (!highlight)
-			return;
-
-		g.setColour(Colours::red);
-		g.fillRect(highlightXPosition - 1, getHeight() - tabHeight, 3, tabHeight);
-	}
-
-	void revealComponent(DockableComponent* dockableComponent) override
-	{
-		dockableComponent->toFront(false);
-		resized();
-	}
+	TabDock(DockableWindowManager& manager_);
+	void addComponentToDock(Component* comp);
+	void resized() override;
+	void paintOverChildren(Graphics& g) override;
 
 private:
 	struct PlacementPosition
@@ -377,75 +348,16 @@ private:
 	};
 
 	/** Finds the nearest top or bottom edge of an existing component to the mouse Y position */
-	PlacementPosition getPlacementPositionForPoint(Point<int> pointRelativeToComponent) const
-	{
-		int result{ 0 };
-		int componentIndex{ 0 };
+	PlacementPosition getPlacementPositionForPoint(Point<int> pointRelativeToComponent) const;
 
-		auto target = pointRelativeToComponent.getX();
-		auto distance = abs(result - target);
+	/* Implementation of DockBase */
+	void startDockableComponentDrag(DockableComponent* component) override;
+	void showDockableComponentPlacement(DockableComponent* component, Point<int> screenPosition) override;
+	bool attachDockableComponent(DockableComponent* component, Point<int> screenPosition) override;
+	void detachDockableComponent(DockableComponent* component) override;
+	void hideDockableComponentPlacement() override;
+	void revealComponent(DockableComponent* dockableComponent) override;
 
-		int count{ 0 };
-
-		for (auto c : dockedComponents)
-		{
-			count++;
-
-			if (!c->isVisible())
-				continue;
-
-			auto tabRightSide = c->getTabButtonBounds().getRight();
-			auto newDistance = abs(tabRightSide  - target);
-
-			if (newDistance < distance)
-			{
-				result = tabRightSide;
-				distance = newDistance;
-				componentIndex = count;
-			}
-		}
-
-		return{ result, componentIndex };
-	}
-
-	void startDockableComponentDrag(DockableComponent* component) override
-	{
-		component->setVisible(false);
-	}
-
-	void showDockableComponentPlacement(DockableComponent* component, Point<int> screenPosition) override
-	{
-		auto placement = getPlacementPositionForPoint(getLocalPoint(nullptr, screenPosition));
-		highlight = true;
-		highlightXPosition = placement.xPosition;
-		repaint();
-	}
-
-	bool attachDockableComponent(DockableComponent* component, Point<int> screenPosition) override
-	{
-		auto placement = getPlacementPositionForPoint(getLocalPoint(nullptr, screenPosition));
-		addAndMakeVisible(component);
-		dockedComponents.insert(placement.insertAfterComponentIndex, component);
-		resized();
-		return true;
-	}
-
-	void detachDockableComponent(DockableComponent* component) override
-	{
-		if (!dockedComponents.contains(component))
-			return;
-
-		removeChildComponent(component);
-		dockedComponents.removeAllInstancesOf(component);
-		resized();
-	}
-
-	void hideDockableComponentPlacement() override
-	{
-		highlight = false;
-		repaint();
-	}
-	
 	DockableWindowManager & manager;
 
 	Array<DockableComponent *> dockedComponents;

@@ -8,14 +8,10 @@ This file was auto-generated!
 
 #include "MainComponent.h"
 
-void DockableWindowManager::createHeavyWeightWindow(DockableComponent * comp, const Point<int> &screenPosition)
-{
-	auto window = new ResizableWindow(comp->getName(), true);
-	window->setContentNonOwned(comp, true);
-	window->setTopLeftPosition(screenPosition);
-	windows.add(window);
-	window->setVisible(true);
-}
+
+
+
+//// //// //// //// //// //// //// //// //// //// //// //// //// //// //// //// 
 
 DockBase::DockBase(DockableWindowManager& manager_, Component * dockComponent_)
 	:
@@ -37,6 +33,8 @@ bool DockBase::containsScreenPosition(const Point<int>& screenPosition) const
 	return screenBounds.contains(screenPosition);
 }
 
+//// //// //// //// //// //// //// //// //// //// //// //// //// //// //// //// 
+
 DockableWindowManager::DockableWindowManager()
 {
 }
@@ -57,10 +55,15 @@ DockableWindowManager::TargetOutline::TargetOutline(Image image_) :
 	setOpaque(false);
 }
 
-//int DockableWindowManager::TargetOutline::getDesktopWindowStyleFlags() const
-//{
-//	return TopLevelWindow::getDesktopWindowStyleFlags() || ComponentPeer::windowIsSemiTransparent;
-//}
+void DockableWindowManager::createHeavyWeightWindow(DockableComponent * comp, const Point<int> &screenPosition)
+{
+	auto window = new ResizableWindow(comp->getName(), true);
+	window->setContentNonOwned(comp, true);
+	window->setTopLeftPosition(screenPosition);
+	windows.add(window);
+	window->setVisible(true);
+}
+
 
 void DockableWindowManager::TargetOutline::paint(Graphics& g)
 {
@@ -110,6 +113,12 @@ DockBase* DockableWindowManager::getDockWithComponent(Component* component) cons
 			return d;
 
 	return nullptr;
+}
+
+void DockableWindowManager::bringComponentToFront(DockableComponent* dockableComponent)
+{
+	for (auto d : docks)
+		d->revealComponent(dockableComponent);
 }
 
 void DockableWindowManager::handleComponentDrag(DockableComponent * componentBeingDragged, Point<int> location, int w, int h)
@@ -263,56 +272,13 @@ Rectangle<int> DockableComponent::getTabButtonBounds() const
 	return {};
 }
 
+//// //// //// //// //// //// //// //// //// //// //// //// //// //// //// //// 
+
 DockableComponentDraggable::DockableComponentDraggable(DockableComponent& owner_, DockableWindowManager& manager_) :
 	owner(owner_),
 	manager(manager_)
 {
 	setMouseCursor(MouseCursor::DraggingHandCursor);
-}
-
-DockableComponentTitleBar::DockableComponentTitleBar(DockableComponent& owner_, DockableWindowManager& manager_):
-	DockableComponentDraggable(owner_, manager_)
-{
-}
-
-void DockableComponentTitleBar::paint(Graphics& g)
-{
-	g.fillAll(Colours::grey);
-	g.setFont(Font(12.0).boldened());
-	g.drawText("Title Bar", getLocalBounds(), Justification::centred, false);
-
-	g.setColour(Colours::black.withAlpha(0.2f));
-	g.drawHorizontalLine(getHeight() - 1, 0.0f, float(getWidth()));
-
-	g.setColour(Colours::lightgrey.withAlpha(0.2f));
-	g.drawHorizontalLine(0, 0.0f, float(getWidth()));
-}
-
-DockableComponentTab::DockableComponentTab(DockableComponent& owner_, DockableWindowManager& manager_):
-	DockableComponentDraggable(owner_, manager_)
-{
-}
-
-void DockableComponentTab::paint(Graphics& g)
-{
-	g.fillAll(frontTab ? Colours::grey : Colours::darkgrey);
-
-	g.setFont(Font(12.0).boldened());
-	g.drawText("Tab", getLocalBounds(), Justification::centred, false);
-}
-
-void DockableComponentTab::setIsFrontTab(bool nowFrontTab)
-{
-	frontTab = nowFrontTab;
-	repaint();
-}
-
-void DockableComponentTab::mouseUp(const MouseEvent& e)
-{
-	if (!isDragging())
-		getDockableComponent().tabButtonClicked();
-	else
-		DockableComponentDraggable::mouseUp(e);
 }
 
 void DockableComponentDraggable::mouseDrag(const MouseEvent& e)
@@ -331,6 +297,57 @@ void DockableComponentDraggable::mouseUp(const MouseEvent& e)
 	manager.handleComponentDragEnd(&owner, e.getScreenPosition());
 	dragging = false;
 }
+
+//// //// //// //// //// //// //// //// //// //// //// //// //// //// //// //// 
+
+DockableComponentTitleBar::DockableComponentTitleBar(DockableComponent& owner_, DockableWindowManager& manager_):
+	DockableComponentDraggable(owner_, manager_)
+{
+}
+
+void DockableComponentTitleBar::paint(Graphics& g)
+{
+	g.fillAll(Colours::grey);
+	g.setFont(Font(12.0).boldened());
+	g.drawText(getDockableComponent().getWindowTitle(), getLocalBounds(), Justification::centred, false);
+
+	g.setColour(Colours::black.withAlpha(0.2f));
+	g.drawHorizontalLine(getHeight() - 1, 0.0f, float(getWidth()));
+
+	g.setColour(Colours::lightgrey.withAlpha(0.2f));
+	g.drawHorizontalLine(0, 0.0f, float(getWidth()));
+}
+
+//// //// //// //// //// //// //// //// //// //// //// //// //// //// //// //// 
+
+DockableComponentTab::DockableComponentTab(DockableComponent& owner_, DockableWindowManager& manager_):
+	DockableComponentDraggable(owner_, manager_)
+{
+}
+
+void DockableComponentTab::paint(Graphics& g)
+{
+	g.fillAll(frontTab ? Colours::grey : Colours::darkgrey);
+
+	g.setFont(Font(12.0).boldened());
+	g.drawText(getDockableComponent().getWindowTitle(), getLocalBounds(), Justification::centred, true);
+}
+
+void DockableComponentTab::setIsFrontTab(bool nowFrontTab)
+{
+	frontTab = nowFrontTab;
+	repaint();
+}
+
+void DockableComponentTab::mouseUp(const MouseEvent& e)
+{
+	if (!isDragging())
+		getDockableComponent().tabButtonClicked();
+	else
+		DockableComponentDraggable::mouseUp(e);
+}
+
+//// //// //// //// //// //// //// //// //// //// //// //// //// //// //// //// 
 
 WindowDockVertical::WindowDockVertical(DockableWindowManager& manager_)
 	: 
@@ -450,6 +467,126 @@ bool WindowDockVertical::attachDockableComponent(DockableComponent* component, P
 	return true;
 }
 
+
+//// //// //// //// //// //// //// //// //// //// //// //// //// //// //// //// 
+
+TabDock::TabDock(DockableWindowManager& manager_):
+	DockBase(manager_, this),
+	manager(manager_)
+{
+}
+
+void TabDock::addComponentToDock(Component* comp)
+{
+	auto dockable = manager.createDockableComponent(comp);
+	dockedComponents.add(dockable);
+	addAndMakeVisible(dockable);
+	resized();
+}
+
+void TabDock::resized()
+{
+	auto area = getLocalBounds();
+
+	int x = 0;
+
+	auto lastComponent = getChildComponent(getNumChildComponents() - 1);
+
+	for (auto& c : dockedComponents)
+	{
+		if (c->isVisible())
+		{
+			c->setBounds(area);
+			c->setShowTab(true, x, c == lastComponent);
+			x += 62;
+		}
+	}
+}
+
+void TabDock::paintOverChildren(Graphics& g)
+{
+	if (!highlight)
+		return;
+
+	g.setColour(Colours::red);
+	g.fillRect(highlightXPosition - 1, getHeight() - tabHeight, 3, tabHeight);
+}
+
+void TabDock::revealComponent(DockableComponent* dockableComponent)
+{
+	dockableComponent->toFront(false);
+	resized();
+}
+
+TabDock::PlacementPosition TabDock::getPlacementPositionForPoint(Point<int> pointRelativeToComponent) const
+{
+	int result{0};
+	int componentIndex{0};
+
+	auto target = pointRelativeToComponent.getX();
+	auto distance = abs(result - target);
+
+	int count{0};
+
+	for (auto c : dockedComponents)
+	{
+		count++;
+
+		if (!c->isVisible())
+			continue;
+
+		auto tabRightSide = c->getTabButtonBounds().getRight();
+		auto newDistance = abs(tabRightSide - target);
+
+		if (newDistance < distance)
+		{
+			result = tabRightSide;
+			distance = newDistance;
+			componentIndex = count;
+		}
+	}
+
+	return {result, componentIndex};
+}
+
+void TabDock::startDockableComponentDrag(DockableComponent* component)
+{
+	component->setVisible(false);
+	resized();
+}
+
+void TabDock::showDockableComponentPlacement(DockableComponent* component, Point<int> screenPosition)
+{
+	auto placement = getPlacementPositionForPoint(getLocalPoint(nullptr, screenPosition));
+	highlight = true;
+	highlightXPosition = placement.xPosition;
+	repaint();
+}
+
+bool TabDock::attachDockableComponent(DockableComponent* component, Point<int> screenPosition)
+{
+	auto placement = getPlacementPositionForPoint(getLocalPoint(nullptr, screenPosition));
+	addAndMakeVisible(component);
+	dockedComponents.insert(placement.insertAfterComponentIndex, component);
+	resized();
+	return true;
+}
+
+void TabDock::detachDockableComponent(DockableComponent* component)
+{
+	if (!dockedComponents.contains(component))
+		return;
+
+	removeChildComponent(component);
+	dockedComponents.removeAllInstancesOf(component);
+	resized();
+}
+
+void TabDock::hideDockableComponentPlacement()
+{
+	highlight = false;
+	repaint();
+}
 //==============================================================================
 
 MainContentComponent::MainContentComponent()
@@ -458,12 +595,12 @@ MainContentComponent::MainContentComponent()
 	addAndMakeVisible(dock);
 	addAndMakeVisible(tabDock);
 	auto baseColour = Colours::blue.withSaturation(0.4f).withBrightness(0.4f);
-	dock.addComponentToDock(new ExampleDockableComponent(baseColour.withRotatedHue(0.1f)));
-	dock.addComponentToDock(new ExampleDockableComponent(baseColour.withRotatedHue(0.2f)));
-	dock.addComponentToDock(new ExampleDockableComponent(baseColour.withRotatedHue(0.3f)));
+	dock.addComponentToDock(new ExampleDockableComponent("Output", baseColour.withRotatedHue(0.1f)));
+	dock.addComponentToDock(new ExampleDockableComponent("Session", baseColour.withRotatedHue(0.2f)));
+	dock.addComponentToDock(new ExampleDockableComponent("Notepad", baseColour.withRotatedHue(0.3f)));
 
-	tabDock.addComponentToDock(new ExampleDockableComponent(baseColour.withRotatedHue(0.6f)));
-	tabDock.addComponentToDock(new ExampleDockableComponent(baseColour.withRotatedHue(0.7f)));
+	tabDock.addComponentToDock(new ExampleDockableComponent("Database View", baseColour.withRotatedHue(0.6f)));
+	tabDock.addComponentToDock(new ExampleDockableComponent("Folder View", baseColour.withRotatedHue(0.7f)));
 }
 
 MainContentComponent::~MainContentComponent()
