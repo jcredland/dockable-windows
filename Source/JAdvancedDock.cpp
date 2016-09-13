@@ -10,6 +10,141 @@
 
 #include "JAdvancedDock.h"
 
+/**
+Manages a row of windows complete with vertical resizer bars.
+*/
+class JAdvancedDock::RowType
+{
+public:
+	RowType()
+	{
+		layout = std::make_unique<StretchableLayoutManager>();
+	}
+
+	RowType(RowType && rhs)
+	{
+		resizers = std::move(rhs.resizers);
+		columns = std::move(rhs.columns);
+		layout = std::move(rhs.layout);
+	}
+
+	RowType & operator=(RowType && rhs)
+	{
+		resizers = std::move(rhs.resizers);
+		columns = std::move(rhs.columns);
+		layout = std::move(rhs.layout);
+		return *this;
+	}
+
+	typedef std::vector<std::unique_ptr<DockableComponentWrapper>> TabDockType;
+
+	void add(TabDockType && newTabDock, int position, Component * parent)
+	{
+		columns.insert(columns.begin() + position, std::move(newTabDock));
+		rebuildResizers(parent);
+	}
+
+	/**
+	Called from the docks resize method.
+	*/
+	void layoutColumns(const Rectangle<int> & area)
+	{
+		std::vector<Component *> comps;
+
+		for (int i = 0; i < columns.size(); ++i)
+		{
+			comps.push_back(columns[i].front().get());
+
+			if (i < resizers.size())
+				comps.push_back(resizers[i].get());
+		}
+
+		if (comps.size() == 1)
+		{
+			comps[0]->setBounds(area); // layoutComponents doesn't seem to cope with only one component passed to it.
+		}
+		else
+		{
+			layout->layOutComponents(comps.data(), comps.size(),
+				area.getX(), area.getY(), area.getWidth(), area.getHeight(), false, true);
+		}
+
+		/* Make all other tabs match our new size...*/
+		for (auto & c : columns)
+		{
+			if (c.size() > 1)
+				for (auto & t : c)
+					t->setBounds(c[0]->getBounds());
+		}
+	}
+
+	void rebuildResizers(Component * parent)
+	{
+		const double resizerWidth = 5.0;
+		resizers.clear();
+
+		int itemIndex = 0;
+
+		for (int pos = 0; pos < columns.size(); ++pos)
+		{
+			layout->setItemLayout(itemIndex++, 10.0, 2000.0, columns[pos][0]->getWidth());
+
+			if (pos < columns.size() - 1)
+			{
+				resizers.push_back(std::make_unique<StretchableLayoutResizerBar>(layout.get(), pos * 2 + 1, true));
+				parent->addAndMakeVisible(resizers.back().get());
+				layout->setItemLayout(itemIndex++, resizerWidth, resizerWidth, resizerWidth);
+			}
+		}
+	}
+
+	/** Sets up the correct tab configuration for a docked component that needs to display tabs */
+	static void configureTabs(const TabDockType & vector)
+	{
+		int tabXPos = 0;
+
+		struct FrontComponent
+		{
+			int zOrder{ -1 };
+			int x;
+			DockableComponentWrapper * component;
+		} frontComponent;
+
+		if (vector.size() < 2)
+			return;
+
+		for (auto& dockedCompWrapper : vector)
+		{
+			if (dockedCompWrapper->isVisible())
+			{
+				auto parent = dockedCompWrapper->getParentComponent();
+				auto myIndex = parent->getIndexOfChildComponent(dockedCompWrapper.get());
+
+				if (myIndex > frontComponent.zOrder)
+				{
+					frontComponent.zOrder = myIndex;
+					frontComponent.component = dockedCompWrapper.get();
+					frontComponent.x = tabXPos;
+				}
+
+				dockedCompWrapper->setShowTabButton(true, tabXPos, false);
+				tabXPos += dockedCompWrapper->getTabWidth() + 2;
+			}
+		}
+
+		if (frontComponent.zOrder != -1)
+			frontComponent.component->setShowTabButton(true, frontComponent.x, true);
+	}
+
+	std::unique_ptr<StretchableLayoutManager> layout;
+	std::vector<TabDockType> columns;
+	std::vector<std::unique_ptr<StretchableLayoutResizerBar>> resizers;
+};
+
+
+/**
+Displays some buttons that let the user decide where they want to place the window.
+*/
 class AdvancedDockPlacementDialog
 	:
 	public Component
@@ -155,13 +290,13 @@ JAdvancedDock::WindowLocation JAdvancedDock::getWindowLocationAtPoint(const Poin
 {
 	auto localPos = getLocalPoint(nullptr, screenPosition);
 
-	for (int rowNumber = 0; rowNumber < windows.size(); ++rowNumber)
+	for (int rowNumber = 0; rowNumber < rows.size(); ++rowNumber)
 	{
-		auto& row = windows[rowNumber];
+		auto& row = rows[rowNumber];
 
-		for (int colNumber = 0; colNumber < row.size(); ++colNumber)
+		for (int colNumber = 0; colNumber < row.columns.size(); ++colNumber)
 		{
-			auto& col = row[colNumber];
+			auto& col = row.columns[colNumber];
 
 			for (int tabNumber = 0; tabNumber < col.size(); ++tabNumber)
 			{
@@ -182,16 +317,16 @@ Rectangle<int> JAdvancedDock::getWindowBoundsAtPoint(const Point<int>& p)
 
 	DBG(String(loc.x) + " " + String(loc.y));
 
-	if (windows.size() == 0)
+	if (rows.size() == 0)
 		return getLocalBounds();
 
-	return windows[loc.y][loc.x][loc.tab]->getBounds();
+	return rows[loc.y].columns[loc.x][loc.tab]->getBounds();
 }
 
 void JAdvancedDock::showDockableComponentPlacement(DockableComponentWrapper* component, Point<int> screenPosition)
 {
-	placementDialog->setTopBottomVisible(windows.size() > 0);
-	placementDialog->setLeftRightVisible(windows.size() > 0);
+	placementDialog->setTopBottomVisible(rows.size() > 0);
+	placementDialog->setLeftRightVisible(rows.size() > 0);
 
 	placementDialog->setVisible(true);
 	placementDialog->toFront(false);
@@ -220,19 +355,21 @@ void JAdvancedDock::insertWindow(const Point<int>& screenPos, AdvancedDockPlaces
 	case AdvancedDockPlaces::top:
 		{
 			RowType newRow;
-			newRow.push_back(TabDockType());
-			newRow[0].push_back(std::unique_ptr<DockableComponentWrapper>(comp));
-			windows.insert(windows.begin() + loc.y, std::move(newRow));
+			newRow.columns.push_back(RowType::TabDockType());
+			newRow.columns[0].push_back(std::unique_ptr<DockableComponentWrapper>(comp));
+			rows.insert(rows.begin() + loc.y, std::move(newRow));
+			rebuildRowResizers();
 			break;
 		}
 
 	case AdvancedDockPlaces::bottom:
 		{
-			auto nudge = windows.size() > 0 ? 1 : 0;
+			auto nudge = rows.size() > 0 ? 1 : 0;
 			RowType newRow;
-			newRow.push_back(TabDockType());
-			newRow[0].push_back(std::unique_ptr<DockableComponentWrapper>(comp));
-			windows.insert(windows.begin() + loc.y + nudge, std::move(newRow));
+			newRow.columns.push_back(RowType::TabDockType());
+			newRow.columns[0].push_back(std::unique_ptr<DockableComponentWrapper>(comp));
+			rows.insert(rows.begin() + loc.y + nudge, std::move(newRow));
+			rebuildRowResizers();
 			break;
 		}
 
@@ -240,37 +377,38 @@ void JAdvancedDock::insertWindow(const Point<int>& screenPos, AdvancedDockPlaces
 
 	case AdvancedDockPlaces::left:
 		{
-			auto& row = windows[loc.y];
-			TabDockType newTabDock;
+			auto& row = rows[loc.y];
+			RowType::TabDockType newTabDock;
 			newTabDock.push_back(std::unique_ptr<DockableComponentWrapper>(comp));
-			row.insert(row.begin() + loc.x, std::move(newTabDock));
+			row.add(std::move(newTabDock), loc.x, this);
 		}
 		break;
 
 	case AdvancedDockPlaces::right:
 		{
-			auto& row = windows[loc.y];
-			TabDockType newTabDock;
+			auto& row = rows[loc.y];
+			RowType::TabDockType newTabDock;
 			newTabDock.push_back(std::unique_ptr<DockableComponentWrapper>(comp));
-			row.insert(row.begin() + loc.x + 1, std::move(newTabDock));
+			row.add(std::move(newTabDock), loc.x + 1, this);
 		}
 		break;
 
 		// make or add to a tabbed dock...
 
 	case AdvancedDockPlaces::centre:
-		if (windows.size() > 0)
+		if (rows.size() > 0)
 		{
-			auto & location = windows[loc.y][loc.x];
+			auto & location = rows[loc.y].columns[loc.x];
 			location.push_back(std::unique_ptr<DockableComponentWrapper>(comp));
-			configureTabs(location);
+			RowType::configureTabs(location);
 		}
 		else
 		{
 			RowType newRow;
-			newRow.push_back(TabDockType());
-			newRow[0].push_back(std::unique_ptr<DockableComponentWrapper>(comp));
-			windows.push_back(std::move(newRow));
+			newRow.columns.push_back(RowType::TabDockType());
+			newRow.columns[0].push_back(std::unique_ptr<DockableComponentWrapper>(comp));
+			rows.push_back(std::move(newRow));
+			rebuildRowResizers();
 			break;
 		}
 		break;
@@ -299,13 +437,13 @@ bool JAdvancedDock::attachDockableComponent(DockableComponentWrapper* component,
 
 void JAdvancedDock::detachDockableComponent(DockableComponentWrapper* component)
 {
-	for (int rowNumber = 0; rowNumber < windows.size(); ++rowNumber)
+	for (int rowNumber = 0; rowNumber < rows.size(); ++rowNumber)
 	{
-		auto& row = windows[rowNumber];
+		auto& row = rows[rowNumber];
 
-		for (int colNumber = 0; colNumber < row.size(); ++colNumber)
+		for (int colNumber = 0; colNumber < row.columns.size(); ++colNumber)
 		{
-			auto& col = row[colNumber];
+			auto& col = row.columns[colNumber];
 
 			for (int tabNumber = 0; tabNumber < col.size(); ++tabNumber)
 			{
@@ -325,13 +463,16 @@ void JAdvancedDock::detachDockableComponent(DockableComponentWrapper* component)
 					else if (col.size() == 0)
 					{ 
 						/* remove tabs, rows and columns if now empty... */
-						row.erase(row.begin() + colNumber);
+						row.columns.erase(row.columns.begin() + colNumber);
 
-						if (row.size() == 0)
-							windows.erase(windows.begin() + rowNumber);
+						if (row.columns.size() == 0)
+							rows.erase(rows.begin() + rowNumber);
 					}
 
+					row.rebuildResizers(this);
+					rebuildRowResizers();
 					resized();
+
 					return;
 				}
 			}
@@ -339,52 +480,96 @@ void JAdvancedDock::detachDockableComponent(DockableComponentWrapper* component)
 	}
 }
 
-void JAdvancedDock::configureTabs(const TabDockType& vector) const
+void JAdvancedDock::revealComponent(DockableComponentWrapper* dockableComponent)
 {
-	int x = 0;
+	dockableComponent->toFront(true);
 
-	auto lastComponent = getChildComponent(getNumChildComponents() - 1);
+	for (auto& r : rows)
+		for (auto& c : r.columns)
+			RowType::configureTabs(c);
 
-	for (auto& dockedCompWrapper : vector)
+	resized();
+}
+
+void JAdvancedDock::rebuildRowResizers()
+{
+	const double resizerSize = 5.0;
+	resizers.clear();
+
+	int itemIndex = 0;
+
+	for (int pos = 0; pos < rows.size(); ++pos)
 	{
-		if (dockedCompWrapper->isVisible())
+		layout.setItemLayout(itemIndex++, 10.0, 2000.0, rows[0].columns[0][0]->getHeight());
+
+		if (pos < rows.size() - 1)
 		{
-			dockedCompWrapper->setShowTabButton(true, x, dockedCompWrapper.get() == lastComponent);
-			x += dockedCompWrapper->getTabWidth() + 2;
+			resizers.push_back(std::make_unique<StretchableLayoutResizerBar>(&layout, pos * 2 + 1, false));
+			addAndMakeVisible(resizers.back().get());
+			layout.setItemLayout(itemIndex++, resizerSize, resizerSize, resizerSize);
 		}
 	}
 }
 
+void JAdvancedDock::layoutRows(const Rectangle<int>& area)
+{
+	std::vector<Component *> comps;
+
+	for (int i = 0; i < rows.size(); ++i)
+	{
+		comps.push_back(rows[i].columns.front().front().get());
+
+		if (i < resizers.size())
+			comps.push_back(resizers[i].get());
+	}
+
+	if (comps.size() == 1)
+	{
+		comps[0]->setBounds(area); // layoutComponents doesn't seem to cope with only one component passed to it.
+	}
+	else
+	{
+		layout.layOutComponents(comps.data(), comps.size(),
+		                         area.getX(), area.getY(), area.getWidth(), area.getHeight(), true, false);
+	}
+
+	///* Make all other columns and tabs match our new size...*/
+	//for (auto& c : rows)
+	//{
+	//	auto bounds = c.columns[0][0]->getBounds();
+
+	//	for (auto & tabSet : c)
+	//		for (auto & tab : tabSet)
+	//			tab->setBounds(bounds);
+	//}
+}
+
 void JAdvancedDock::resized()
 {
-	if (windows.size() == 0)
+	if (rows.size() == 0)
 		return;
 
 	auto area = getLocalBounds();
 
-	auto vheight = area.getHeight() / windows.size();
+	for (auto & resizer : resizers)
+		resizer->setSize(area.getWidth(), 5);
 
-	for (auto& row : windows)
+	layoutRows(area);
+
+	for (auto& row : rows)
 	{
-		if (row.size() == 0)
+		if (row.columns.size() == 0)
 			continue; // shouldn't happen, but just for safety...
 
-		auto area2 = area.removeFromTop(vheight);
-		auto hwidth = area.getWidth() / row.size();
+		auto area2 = row.columns[0][0]->getBounds().withWidth(area.getWidth()); // the first component will have had bounds set by the row resizer so we copy these over.
 
-		for (auto& column : row)
-		{
-			auto area3 = area2.removeFromLeft(hwidth);
-
-			for (auto& tabbedComponent : column)
-				tabbedComponent->setBounds(area3);
-		}
+		row.layoutColumns(area2);
 	}
 }
 
 void JAdvancedDock::paint(Graphics& g)
 {
-	if (windows.size() == 0)
+	if (rows.size() == 0)
 	{
 		g.fillAll(Colours::darkred);
 		g.setColour(Colours::white);

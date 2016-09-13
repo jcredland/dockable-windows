@@ -52,6 +52,9 @@ private:
 
 	WindowLocation getWindowLocationAtPoint(const Point<int>& screenPosition);
 	Rectangle<int> getWindowBoundsAtPoint(const Point<int>& p);
+	/**
+	Insert a new window in to the right place in our dock...
+	*/
 	void insertWindow(const Point<int>& screenPos, AdvancedDockPlaces::Places places, DockableComponentWrapper* comp);
 
 	void showDockableComponentPlacement(DockableComponentWrapper* component, Point<int> screenPosition) override;
@@ -59,18 +62,18 @@ private:
 	void startDockableComponentDrag(DockableComponentWrapper* component) override;
 	bool attachDockableComponent(DockableComponentWrapper* component, Point<int> screenPosition) override;
 	void detachDockableComponent(DockableComponentWrapper* component) override;
-	void revealComponent(DockableComponentWrapper* dockableComponent) override
-	{
-		dockableComponent->toFront(true);
-		resized();
-	}
+	void revealComponent(DockableComponentWrapper* dockableComponent) override;
 
-	typedef std::vector<std::unique_ptr<DockableComponentWrapper>> TabDockType;
-	typedef std::vector<TabDockType> RowType;
-	std::vector<RowType> windows;
 
-	/** Sets up the correct tab configuration for a docked component that needs to display tabs */
-	void configureTabs(const TabDockType & vector) const;
+	class RowType;
+
+	std::vector<RowType> rows;
+	std::vector<std::unique_ptr<StretchableLayoutResizerBar>> resizers;
+	StretchableLayoutManager layout;
+
+	void rebuildRowResizers();
+	void layoutRows(const Rectangle<int>& area);
+
 
 	ScopedPointer<AdvancedDockPlacementDialog> placementDialog;
 };
