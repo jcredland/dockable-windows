@@ -46,6 +46,8 @@ public:
 
 	/**
 	Called from the docks resize method.
+
+	@note this and the layoutRows() function are similar, but not similar enough...
 	*/
 	void layoutColumns(const Rectangle<int> & area)
 	{
@@ -235,8 +237,6 @@ public:
 		buttons[AdvancedDockPlaces::bottom]->setBounds(bottomArea.toNearestInt());
 	}
 
-
-
 	AdvancedDockPlaces::Places getSelectionForCoordinates(Point<int> position) const
 	{
 		for (auto b : buttons)
@@ -290,20 +290,20 @@ JAdvancedDock::WindowLocation JAdvancedDock::getWindowLocationAtPoint(const Poin
 {
 	auto localPos = getLocalPoint(nullptr, screenPosition);
 
-	for (int rowNumber = 0; rowNumber < rows.size(); ++rowNumber)
+	for (int y = 0; y < rows.size(); ++y)
 	{
-		auto& row = rows[rowNumber];
+		auto& row = rows[y];
 
-		for (int colNumber = 0; colNumber < row.columns.size(); ++colNumber)
+		for (int x = 0; x < row.columns.size(); ++x)
 		{
-			auto& col = row.columns[colNumber];
+			auto& col = row.columns[x];
 
-			for (int tabNumber = 0; tabNumber < col.size(); ++tabNumber)
+			for (int z = 0; z < col.size(); ++z)
 			{
-				auto& tab = col[tabNumber];
+				auto& tab = col[z];
 
 				if (tab->getBounds().contains(localPos))
-					return {rowNumber, colNumber, tabNumber};
+					return {y, x, z};
 			}
 		}
 	}
@@ -314,8 +314,6 @@ JAdvancedDock::WindowLocation JAdvancedDock::getWindowLocationAtPoint(const Poin
 Rectangle<int> JAdvancedDock::getWindowBoundsAtPoint(const Point<int>& p)
 {
 	auto loc = getWindowLocationAtPoint(p);
-
-	DBG(String(loc.x) + " " + String(loc.y));
 
 	if (rows.size() == 0)
 		return getLocalBounds();
@@ -343,74 +341,59 @@ void JAdvancedDock::startDockableComponentDrag(DockableComponentWrapper* compone
 {
 }
 
+void JAdvancedDock::insertNewDock(DockableComponentWrapper* comp, JAdvancedDock::WindowLocation loc)
+{
+	auto& row = rows[loc.y];
+	RowType::TabDockType newTabDock;
+	newTabDock.push_back(std::unique_ptr<DockableComponentWrapper>(comp));
+	row.add(std::move(newTabDock), loc.x, this);
+}
+
+void JAdvancedDock::insertNewRow(DockableComponentWrapper* comp, JAdvancedDock::WindowLocation loc)
+{
+	RowType newRow;
+	newRow.columns.push_back(RowType::TabDockType());
+	newRow.columns[0].push_back(std::unique_ptr<DockableComponentWrapper>(comp));
+	rows.insert(rows.begin() + loc.y, std::move(newRow));
+	rebuildRowResizers();
+}
+
+void JAdvancedDock::insertToNewTab(DockableComponentWrapper* comp, JAdvancedDock::WindowLocation loc)
+{
+	auto & location = rows[loc.y].columns[loc.x];
+	location.push_back(std::unique_ptr<DockableComponentWrapper>(comp));
+	RowType::configureTabs(location);
+}
+
 void JAdvancedDock::insertWindow(const Point<int>& screenPos, AdvancedDockPlaces::Places places, DockableComponentWrapper* comp)
 {
 	auto loc = getWindowLocationAtPoint(screenPos);
 
 	switch (places)
 	{
-
-		// insert a new row...
-
 	case AdvancedDockPlaces::top:
-		{
-			RowType newRow;
-			newRow.columns.push_back(RowType::TabDockType());
-			newRow.columns[0].push_back(std::unique_ptr<DockableComponentWrapper>(comp));
-			rows.insert(rows.begin() + loc.y, std::move(newRow));
-			rebuildRowResizers();
-			break;
-		}
+		insertNewRow(comp, loc);
+		break;
 
 	case AdvancedDockPlaces::bottom:
-		{
-			auto nudge = rows.size() > 0 ? 1 : 0;
-			RowType newRow;
-			newRow.columns.push_back(RowType::TabDockType());
-			newRow.columns[0].push_back(std::unique_ptr<DockableComponentWrapper>(comp));
-			rows.insert(rows.begin() + loc.y + nudge, std::move(newRow));
-			rebuildRowResizers();
-			break;
-		}
-
-		// add a new dock to an existing row...
+		loc.y += rows.size() > 0 ? 1 : 0;
+		insertNewRow(comp, loc);
+		break;
 
 	case AdvancedDockPlaces::left:
-		{
-			auto& row = rows[loc.y];
-			RowType::TabDockType newTabDock;
-			newTabDock.push_back(std::unique_ptr<DockableComponentWrapper>(comp));
-			row.add(std::move(newTabDock), loc.x, this);
-		}
+		insertNewDock(comp, loc);
 		break;
 
 	case AdvancedDockPlaces::right:
-		{
-			auto& row = rows[loc.y];
-			RowType::TabDockType newTabDock;
-			newTabDock.push_back(std::unique_ptr<DockableComponentWrapper>(comp));
-			row.add(std::move(newTabDock), loc.x + 1, this);
-		}
+		loc.x++;
+		insertNewDock(comp, loc);
 		break;
-
-		// make or add to a tabbed dock...
 
 	case AdvancedDockPlaces::centre:
 		if (rows.size() > 0)
-		{
-			auto & location = rows[loc.y].columns[loc.x];
-			location.push_back(std::unique_ptr<DockableComponentWrapper>(comp));
-			RowType::configureTabs(location);
-		}
+			insertToNewTab(comp, loc);
 		else
-		{
-			RowType newRow;
-			newRow.columns.push_back(RowType::TabDockType());
-			newRow.columns[0].push_back(std::unique_ptr<DockableComponentWrapper>(comp));
-			rows.push_back(std::move(newRow));
-			rebuildRowResizers();
-			break;
-		}
+			insertNewRow(comp, loc);
 		break;
 
 	case AdvancedDockPlaces::none:
@@ -437,23 +420,23 @@ bool JAdvancedDock::attachDockableComponent(DockableComponentWrapper* component,
 
 void JAdvancedDock::detachDockableComponent(DockableComponentWrapper* component)
 {
-	for (int rowNumber = 0; rowNumber < rows.size(); ++rowNumber)
+	for (int y = 0; y < rows.size(); ++y)
 	{
-		auto& row = rows[rowNumber];
+		auto& row = rows[y];
 
-		for (int colNumber = 0; colNumber < row.columns.size(); ++colNumber)
+		for (int x = 0; x < row.columns.size(); ++x)
 		{
-			auto& col = row.columns[colNumber];
+			auto& col = row.columns[x];
 
-			for (int tabNumber = 0; tabNumber < col.size(); ++tabNumber)
+			for (int z = 0; z < col.size(); ++z)
 			{
-				auto& tab = col[tabNumber];
+				auto& tab = col[z];
 
 				if (tab.get() == component)
 				{
 					tab.release();
 
-					col.erase(col.begin() + tabNumber);
+					col.erase(col.begin() + z);
 
 					if (col.size() == 1)
 					{
@@ -463,10 +446,10 @@ void JAdvancedDock::detachDockableComponent(DockableComponentWrapper* component)
 					else if (col.size() == 0)
 					{ 
 						/* remove tabs, rows and columns if now empty... */
-						row.columns.erase(row.columns.begin() + colNumber);
+						row.columns.erase(row.columns.begin() + x);
 
 						if (row.columns.size() == 0)
-							rows.erase(rows.begin() + rowNumber);
+							rows.erase(rows.begin() + y);
 					}
 
 					row.rebuildResizers(this);
@@ -532,16 +515,6 @@ void JAdvancedDock::layoutRows(const Rectangle<int>& area)
 		layout.layOutComponents(comps.data(), comps.size(),
 		                         area.getX(), area.getY(), area.getWidth(), area.getHeight(), true, false);
 	}
-
-	///* Make all other columns and tabs match our new size...*/
-	//for (auto& c : rows)
-	//{
-	//	auto bounds = c.columns[0][0]->getBounds();
-
-	//	for (auto & tabSet : c)
-	//		for (auto & tab : tabSet)
-	//			tab->setBounds(bounds);
-	//}
 }
 
 void JAdvancedDock::resized()
@@ -571,8 +544,8 @@ void JAdvancedDock::paint(Graphics& g)
 {
 	if (rows.size() == 0)
 	{
-		g.fillAll(Colours::darkred);
+		g.fillAll(Colours::darkgrey);
 		g.setColour(Colours::white);
-		g.drawText("Drag a window here", getLocalBounds(), Justification::centred, false);
+		g.drawText("Advanced Dock", getLocalBounds(), Justification::centred, false);
 	}
 }

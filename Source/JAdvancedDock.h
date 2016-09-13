@@ -60,6 +60,9 @@ private:
 	void showDockableComponentPlacement(DockableComponentWrapper* component, Point<int> screenPosition) override;
 	void hideDockableComponentPlacement() override;
 	void startDockableComponentDrag(DockableComponentWrapper* component) override;
+	void insertNewDock(DockableComponentWrapper* comp, JAdvancedDock::WindowLocation loc);
+	void insertNewRow(DockableComponentWrapper* comp, JAdvancedDock::WindowLocation loc);
+	void insertToNewTab(DockableComponentWrapper* comp, JAdvancedDock::WindowLocation loc);
 	bool attachDockableComponent(DockableComponentWrapper* component, Point<int> screenPosition) override;
 	void detachDockableComponent(DockableComponentWrapper* component) override;
 	void revealComponent(DockableComponentWrapper* dockableComponent) override;
