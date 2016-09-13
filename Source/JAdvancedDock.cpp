@@ -534,7 +534,7 @@ void JAdvancedDock::resized()
 		if (row.columns.size() == 0)
 			continue; // shouldn't happen, but just for safety...
 
-		auto area2 = row.columns[0][0]->getBounds().withWidth(area.getWidth()); // the first component will have had bounds set by the row resizer so we copy these over.
+		auto area2 = row.columns[0][0]->getBounds().withWidth(area.getWidth()).withX(0); // the first component will have had bounds set by the row resizer so we copy these over.
 
 		row.layoutColumns(area2);
 	}

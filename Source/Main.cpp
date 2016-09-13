@@ -70,6 +70,7 @@ public:
 
             centreWithSize (getWidth(), getHeight());
             setVisible (true);
+			setResizable(true, false);
         }
 
         void closeButtonPressed() override

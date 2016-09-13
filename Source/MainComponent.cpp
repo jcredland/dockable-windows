@@ -30,13 +30,13 @@ MainContentComponent::~MainContentComponent()
 
 void MainContentComponent::paint(Graphics& g)
 {
-	g.fillAll(Colour(0xff001F36));
+	g.fillAll(Colours::black);
 }
 
 void MainContentComponent::resized()
 {
 	auto area = getLocalBounds();
-	dock.setBounds(area.removeFromLeft(150));
-	tabDock.setBounds(area.removeFromRight(250));
-	advancedDock.setBounds(area);
+	dock.setBounds(area.removeFromLeft(150).reduced(4));
+	tabDock.setBounds(area.removeFromRight(250).reduced(4));
+	advancedDock.setBounds(area.reduced(4));
 }
