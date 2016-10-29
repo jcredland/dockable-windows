@@ -406,7 +406,7 @@ void WindowDockVertical::addComponentToDock(Component* comp)
 
 void WindowDockVertical::resized()
 {
-	auto visibleComponentCount{ 0 };
+	auto visibleComponentCount = int{ 0 };
 	
 	for (auto d : dockableComponentWrappers)
 		if (d->isVisible())

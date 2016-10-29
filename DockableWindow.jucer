@@ -2,7 +2,7 @@
 
 <JUCERPROJECT id="MSzcIi" name="DockableWindow" projectType="guiapp" version="1.0.0"
               bundleIdentifier="com.yourcompany.DockableWindow" includeBinaryInAppConfig="1"
-              jucerVersion="4.2.1">
+              jucerVersion="4.2.3">
   <MAINGROUP id="tDbEK9" name="DockableWindow">
     <GROUP id="{1E6B25AA-7F57-6CCD-FDE5-3DF45DD19917}" name="Source">
       <FILE id="D7DrFd" name="JDockableWindows.cpp" compile="1" resource="0"
@@ -27,19 +27,40 @@
                        isDebug="0" optimisation="3" targetName="DockableWindow"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
-        <MODULEPATH id="juce_core" path="../RT_edit/trunk/JUCE/modules"/>
-        <MODULEPATH id="juce_events" path="../RT_edit/trunk/JUCE/modules"/>
-        <MODULEPATH id="juce_graphics" path="../RT_edit/trunk/JUCE/modules"/>
-        <MODULEPATH id="juce_data_structures" path="../RT_edit/trunk/JUCE/modules"/>
-        <MODULEPATH id="juce_gui_basics" path="../RT_edit/trunk/JUCE/modules"/>
-        <MODULEPATH id="juce_gui_extra" path="../RT_edit/trunk/JUCE/modules"/>
-        <MODULEPATH id="juce_cryptography" path="../RT_edit/trunk/JUCE/modules"/>
-        <MODULEPATH id="juce_audio_basics" path="../RT_edit/trunk/JUCE/modules"/>
-        <MODULEPATH id="juce_audio_devices" path="../RT_edit/trunk/JUCE/modules"/>
-        <MODULEPATH id="juce_audio_formats" path="../RT_edit/trunk/JUCE/modules"/>
-        <MODULEPATH id="juce_audio_processors" path="../RT_edit/trunk/JUCE/modules"/>
+        <MODULEPATH id="juce_core" path="../juce/modules"/>
+        <MODULEPATH id="juce_events" path="../juce/modules"/>
+        <MODULEPATH id="juce_graphics" path="../juce/modules"/>
+        <MODULEPATH id="juce_data_structures" path="../juce/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="../juce/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="../juce/modules"/>
+        <MODULEPATH id="juce_cryptography" path="../juce/modules"/>
+        <MODULEPATH id="juce_audio_basics" path="../juce/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="../juce/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="../juce/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="../juce/modules"/>
       </MODULEPATHS>
     </VS2015>
+    <XCODE_MAC targetFolder="Builds/MacOSX">
+      <CONFIGURATIONS>
+        <CONFIGURATION name="Debug" isDebug="1" optimisation="1" targetName="DockableWindow"
+                       cppLibType="libc++" cppLanguageStandard="c++14"/>
+        <CONFIGURATION name="Release" isDebug="0" optimisation="3" targetName="DockableWindow"
+                       cppLanguageStandard="c++14" cppLibType="libc++"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_gui_extra" path="../juce/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="../juce/modules"/>
+        <MODULEPATH id="juce_graphics" path="../juce/modules"/>
+        <MODULEPATH id="juce_events" path="../juce/modules"/>
+        <MODULEPATH id="juce_data_structures" path="../juce/modules"/>
+        <MODULEPATH id="juce_cryptography" path="../juce/modules"/>
+        <MODULEPATH id="juce_core" path="../juce/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="../juce/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="../juce/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="../juce/modules"/>
+        <MODULEPATH id="juce_audio_basics" path="../juce/modules"/>
+      </MODULEPATHS>
+    </XCODE_MAC>
   </EXPORTFORMATS>
   <MODULES>
     <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0"/>
