@@ -22,6 +22,8 @@ MainContentComponent::MainContentComponent()
 
 	tabDock.addComponentToDock(new ExampleDockableComponent("Database View", baseColour.withRotatedHue(0.6f)));
 	tabDock.addComponentToDock(new ExampleDockableComponent("Folder View", baseColour.withRotatedHue(0.7f)));
+    advancedDock.addComponentToDock(new ExampleDockableComponent("Extra View", baseColour.withRotatedHue(0.9f)));
+    advancedDock.addComponentToDock(new ExampleDockableComponent("Another View", baseColour.withRotatedHue(0.85f)));
 }
 
 MainContentComponent::~MainContentComponent()

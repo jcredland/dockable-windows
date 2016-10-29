@@ -38,6 +38,16 @@ public:
 
 	~JAdvancedDock();;
 
+    /**
+     Adds a component to the dock so it's visible to the user.
+     
+     We assume you are managing the components lifetime.  However an optional change could be to have the
+     DockManager manage them.
+     
+     @todo - this function needs some work so it can insert a component in a location of your choice
+     so expect the interface to change at some point!
+     */
+    void addComponentToDock(Component * component);
 	void resized() override;
 	void paint(Graphics& g) override;
 
@@ -77,7 +87,7 @@ private:
 	void rebuildRowResizers();
 	void layoutRows(const Rectangle<int>& area);
 
-
+    DockableWindowManager & manager;
 	ScopedPointer<AdvancedDockPlacementDialog> placementDialog;
 };
 

@@ -272,7 +272,7 @@ private:
 	const float padding = 4.0f;
 };
 
-JAdvancedDock::JAdvancedDock(DockableWindowManager& manager_): DockBase(manager_, this)
+JAdvancedDock::JAdvancedDock(DockableWindowManager& manager_): DockBase(manager_, this),manager(manager_)
 {
 	placementDialog = new AdvancedDockPlacementDialog();
 	addChildComponent(placementDialog);
@@ -400,6 +400,20 @@ void JAdvancedDock::insertWindow(const Point<int>& screenPos, AdvancedDockPlaces
 		jassertfalse;
 		break;
 	}
+}
+
+void JAdvancedDock::addComponentToDock(Component* comp)
+{
+    auto dockable = manager.createDockableComponent(comp);
+    addAndMakeVisible(dockable);
+    auto loc = WindowLocation{0, 0, 0};
+    
+    if (rows.size() > 0)
+        insertToNewTab(dockable, loc);
+    else
+        insertNewRow(dockable, loc);
+
+    resized();
 }
 
 bool JAdvancedDock::attachDockableComponent(DockableComponentWrapper* component, Point<int> screenPosition)
