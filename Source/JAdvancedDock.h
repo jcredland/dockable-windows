@@ -38,16 +38,21 @@ public:
 
 	~JAdvancedDock();;
 
-    /**
-     Adds a component to the dock so it's visible to the user.
+    /** Adds a component to the dock so it's visible to the user.
      
-     We assume you are managing the components lifetime.  However an optional change could be to have the
-     DockManager manage them.
-     
-     @todo - this function needs some work so it can insert a component in a location of your choice
-     so expect the interface to change at some point!
+     We assume you are managing the components lifetime.  However an optional 
+     change could be to have the DockManager manage them.
      */
     void addComponentToDock(Component * component);
+    
+    /** Adds a component to the dock so it's visible to the user.
+     
+     @param rowPosition - where to insert the new row.  If rowPosition is -1 it
+     will be inserted at the bottom. Rows are numbered from the top down.  A row 
+     position of 0 will insert the component at the top. */
+    void addComponentToNewRow(Component * component, int rowPosition);
+
+    
 	void resized() override;
 	void paint(Graphics& g) override;
 

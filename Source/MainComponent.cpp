@@ -22,8 +22,11 @@ MainContentComponent::MainContentComponent()
 
 	tabDock.addComponentToDock(new ExampleDockableComponent("Database View", baseColour.withRotatedHue(0.6f)));
 	tabDock.addComponentToDock(new ExampleDockableComponent("Folder View", baseColour.withRotatedHue(0.7f)));
-    advancedDock.addComponentToDock(new ExampleDockableComponent("Extra View", baseColour.withRotatedHue(0.9f)));
+    
+    advancedDock.addComponentToNewRow(new ExampleDockableComponent("Extra View", baseColour.withRotatedHue(0.9f)), 0);
     advancedDock.addComponentToDock(new ExampleDockableComponent("Another View", baseColour.withRotatedHue(0.85f)));
+    advancedDock.addComponentToNewRow(new ExampleDockableComponent("Top", baseColour.withRotatedHue(0.85f)), 0);
+    advancedDock.addComponentToNewRow(new ExampleDockableComponent("Bottom", baseColour.withRotatedHue(0.85f)), -1);
 }
 
 MainContentComponent::~MainContentComponent()

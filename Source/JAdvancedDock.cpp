@@ -416,6 +416,21 @@ void JAdvancedDock::addComponentToDock(Component* comp)
     resized();
 }
 
+void JAdvancedDock::addComponentToNewRow(Component * component, int rowPosition)
+{
+    auto dockable = manager.createDockableComponent(component);
+    addAndMakeVisible(dockable);
+    
+    if (rowPosition > rows.size())
+        rowPosition = rows.size();
+    
+    auto loc = WindowLocation{rowPosition, 0, 0};
+    
+    insertNewRow(dockable, loc);
+    
+    resized();
+}
+
 bool JAdvancedDock::attachDockableComponent(DockableComponentWrapper* component, Point<int> screenPosition)
 {
 	auto placement = placementDialog->getSelectionForCoordinates(placementDialog->getLocalPoint(nullptr, screenPosition));
