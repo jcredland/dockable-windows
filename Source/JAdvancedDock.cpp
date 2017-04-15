@@ -36,7 +36,7 @@ public:
 		return *this;
 	}
 
-	typedef std::vector<std::unique_ptr<DockableComponentWrapper>> TabDockType;
+	typedef std::vector<DockableComponentWrapper *> TabDockType;
 
 	void add(TabDockType && newTabDock, int position, Component * parent)
 	{
@@ -55,7 +55,7 @@ public:
 
 		for (int i = 0; i < columns.size(); ++i)
 		{
-			comps.push_back(columns[i].front().get());
+			comps.push_back(columns[i].front());
 
 			if (i < resizers.size())
 				comps.push_back(resizers[i].get());
@@ -108,9 +108,11 @@ public:
 		struct FrontComponent
 		{
 			int zOrder{ -1 };
-			int x;
-			DockableComponentWrapper * component;
-		} frontComponent;
+			int x{ 0 };
+			DockableComponentWrapper * component{ nullptr };
+		};
+
+		FrontComponent frontComponent;
 
 		if (vector.size() < 2)
 			return;
@@ -120,12 +122,12 @@ public:
 			if (dockedCompWrapper->isVisible())
 			{
 				auto parent = dockedCompWrapper->getParentComponent();
-				auto myIndex = parent->getIndexOfChildComponent(dockedCompWrapper.get());
+				auto myIndex = parent->getIndexOfChildComponent(dockedCompWrapper);
 
 				if (myIndex > frontComponent.zOrder)
 				{
 					frontComponent.zOrder = myIndex;
-					frontComponent.component = dockedCompWrapper.get();
+					frontComponent.component = dockedCompWrapper;
 					frontComponent.x = tabXPos;
 				}
 
@@ -345,7 +347,7 @@ void JAdvancedDock::insertNewDock(DockableComponentWrapper* comp, JAdvancedDock:
 {
 	auto& row = rows[loc.y];
 	RowType::TabDockType newTabDock;
-	newTabDock.push_back(std::unique_ptr<DockableComponentWrapper>(comp));
+	newTabDock.push_back(comp);
 	row.add(std::move(newTabDock), loc.x, this);
 }
 
@@ -353,7 +355,7 @@ void JAdvancedDock::insertNewRow(DockableComponentWrapper* comp, JAdvancedDock::
 {
 	RowType newRow;
 	newRow.columns.push_back(RowType::TabDockType());
-	newRow.columns[0].push_back(std::unique_ptr<DockableComponentWrapper>(comp));
+	newRow.columns[0].push_back(comp);
 	rows.insert(rows.begin() + loc.y, std::move(newRow));
 	rebuildRowResizers();
 }
@@ -361,7 +363,7 @@ void JAdvancedDock::insertNewRow(DockableComponentWrapper* comp, JAdvancedDock::
 void JAdvancedDock::insertToNewTab(DockableComponentWrapper* comp, JAdvancedDock::WindowLocation loc)
 {
 	auto & location = rows[loc.y].columns[loc.x];
-	location.push_back(std::unique_ptr<DockableComponentWrapper>(comp));
+	location.push_back(comp);
 	RowType::configureTabs(location);
 }
 
@@ -461,10 +463,8 @@ void JAdvancedDock::detachDockableComponent(DockableComponentWrapper* component)
 			{
 				auto& tab = col[z];
 
-				if (tab.get() == component)
+				if (tab == component)
 				{
-					tab.release();
-
 					col.erase(col.begin() + z);
 
 					if (col.size() == 1)
@@ -529,7 +529,7 @@ void JAdvancedDock::layoutRows(const Rectangle<int>& area)
 
 	for (int i = 0; i < rows.size(); ++i)
 	{
-		comps.push_back(rows[i].columns.front().front().get());
+		comps.push_back(rows[i].columns.front().front());
 
 		if (i < resizers.size())
 			comps.push_back(resizers[i].get());

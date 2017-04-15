@@ -138,6 +138,10 @@ public:
 	*/
 	void bringComponentToFront(DockableComponentWrapper* dockableComponent);
 
+	/**
+	Remove and delete a dockable component wrapper.
+	*/
+	void deleteDockableComponent(DockableComponentWrapper* dockableComponentWrapper);
 private:
 	friend class DockBase;
 	void addDock(DockBase* newDock);
@@ -174,11 +178,13 @@ Base class for windows that can be dragged between docks and desktop windows.
 */
 class DockableComponentWrapper
 	:
-	public Component
+	public Component,
+	public ComponentListener
 {
 public:
 	DockableComponentWrapper(DockableWindowManager &);
 	DockableComponentWrapper(DockableWindowManager &, Component * contentComponentUnowned);
+	~DockableComponentWrapper();
 
 	void setContentComponentUnowned(Component* content);
 
@@ -226,6 +232,10 @@ public:
 
 	Rectangle<int> getTabButtonBounds() const;
 
+	void componentBeingDeleted(Component& component) override
+	{
+		manager.deleteDockableComponent(this);
+	}
 private:
 	ScopedPointer<DockableComponentTitleBar> titleBar;
 	ScopedPointer<DockableComponentTab> tabButton;
@@ -233,8 +243,10 @@ private:
 	int tabXPosition{ 0 };
 	int tabWidthToUse{ -1 };
 
-	Component * contentComponent{ nullptr };
+	WeakReference<Component> contentComponent;
 	DockableWindowManager & manager;
+
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DockableComponentWrapper)
 };
 
 /**

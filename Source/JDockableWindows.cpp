@@ -125,6 +125,12 @@ void DockableWindowManager::bringComponentToFront(DockableComponentWrapper* dock
 		d->revealComponent(dockableComponent);
 }
 
+void DockableWindowManager::deleteDockableComponent(DockableComponentWrapper* dockableComponentWrapper)
+{
+	divorceComponentFromParent(dockableComponentWrapper);
+	dockableComponents.removeObject(dockableComponentWrapper);
+}
+
 void DockableWindowManager::handleComponentDrag(DockableComponentWrapper * componentBeingDragged, Point<int> location, int w, int h)
 {
 	if (!transparentDragImageWindow)
@@ -207,6 +213,11 @@ DockableComponentWrapper::DockableComponentWrapper(DockableWindowManager&manager
 	setContentComponentUnowned(contentComponentUnowned);
 }
 
+DockableComponentWrapper::~DockableComponentWrapper()
+{
+	//jassertfalse;
+}
+
 void DockableComponentWrapper::resized()
 {
 	auto area = getLocalBounds();
@@ -254,6 +265,8 @@ void DockableComponentWrapper::setContentComponentUnowned(Component* content)
 
 	if (contentComponent)
 		addAndMakeVisible(contentComponent);
+
+	content->addComponentListener(this);
 
 	resized();
 }
