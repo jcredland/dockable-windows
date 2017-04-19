@@ -119,10 +119,39 @@ DockBase* DockableWindowManager::getDockWithComponent(Component* component) cons
 	return nullptr;
 }
 
-void DockableWindowManager::bringComponentToFront(DockableComponentWrapper* dockableComponent)
+void DockableWindowManager::bringDockableComponentToFront(DockableComponentWrapper* dockableComponent)
 {
 	for (auto d : docks)
 		d->revealComponent(dockableComponent);
+}
+
+void DockableWindowManager::bringComponentToFront(Component* component)
+{
+	auto parent = component->getParentComponent();
+
+	if (parent == nullptr)
+		return;
+
+	auto possibleDockableComponentWrapper = dynamic_cast<DockableComponentWrapper*>(parent);
+
+	if (possibleDockableComponentWrapper)
+	{
+		for (auto w : windows)
+		{
+			if (w->getContentComponent() == possibleDockableComponentWrapper)
+			{
+				w->toFront(true);
+				return;
+			}
+		}
+
+		for (auto d : docks)
+			d->revealComponent(possibleDockableComponentWrapper);
+	}
+	else
+	{
+		jassertfalse; // not a dockable component
+	}
 }
 
 void DockableWindowManager::deleteDockableComponent(DockableComponentWrapper* dockableComponentWrapper)

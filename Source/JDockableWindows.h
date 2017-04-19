@@ -129,14 +129,19 @@ public:
 
 	/**
 	Returns the DockBase object with a Dock component of 'component'.  Note that this is the
-	dock's component.  This isn't a way of directly finding the Dock holding your DockableComponentWrapper.
+	dock's component.  This isn't a way of directly finding the Dock holding your 
+	DockableComponentWrapper.
 	*/
 	DockBase* getDockWithComponent(Component* component) const;
 
 	/**
 	Brings a specific DockableComponentWrapper to the front of any tabbed docks.
 	*/
-	void bringComponentToFront(DockableComponentWrapper* dockableComponent);
+	void bringDockableComponentToFront(DockableComponentWrapper* dockableComponent);
+	/**
+	 * Reveals a specific component on the script. 
+	 */
+	void bringComponentToFront(Component* component);
 
 	/**
 	Remove and delete a dockable component wrapper.
@@ -228,7 +233,7 @@ public:
 	void setShowTabButton(bool shouldShowTab, int xPosition, bool isFront);
 
 	/** @internal - callback from the Tab button */
-	void tabButtonClicked() { manager.bringComponentToFront(this); }
+	void tabButtonClicked() { manager.bringDockableComponentToFront(this); }
 
 	Rectangle<int> getTabButtonBounds() const;
 
