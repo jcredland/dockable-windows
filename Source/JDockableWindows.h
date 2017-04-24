@@ -166,6 +166,7 @@ private:
 	/** And all the docks ... */
 	Array<DockBase *> docks;
 
+	ComponentBoundsConstrainer basicConstrainer;
 	DockBase * highlightedDock{ nullptr };
 	Component * currentlyDraggedComponent{ nullptr };
 
@@ -177,9 +178,8 @@ class DockableComponentTitleBar;
 class DockableComponentTab;
 
 /**
-Base class for windows that can be dragged between docks and desktop windows.
-
-@todo add a way of using custom tabs and titlebars.
+All components displayed by the dockable window system have a DockableComponentWrapper as 
+their parent.
 */
 class DockableComponentWrapper
 	:

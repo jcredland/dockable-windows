@@ -37,6 +37,8 @@ bool DockBase::containsScreenPosition(const Point<int>& screenPosition) const
 
 DockableWindowManager::DockableWindowManager()
 {
+	basicConstrainer.setMinimumWidth(100);
+	basicConstrainer.setMinimumHeight(35);
 }
 
 void DockableWindowManager::addDock(DockBase* newDock)
@@ -62,6 +64,8 @@ void DockableWindowManager::createHeavyWeightWindow(DockableComponentWrapper * c
 	window->setTopLeftPosition(screenPosition);
 	windows.add(window);
 	window->setVisible(true);
+	window->setConstrainer(&basicConstrainer);
+	window->setResizable(true, false);
 }
 
 
@@ -244,6 +248,7 @@ DockableComponentWrapper::DockableComponentWrapper(DockableWindowManager&manager
 
 DockableComponentWrapper::~DockableComponentWrapper()
 {
+	contentComponent->removeComponentListener(this);
 	//jassertfalse;
 }
 
@@ -290,6 +295,9 @@ int DockableComponentWrapper::getTabWidth()
 
 void DockableComponentWrapper::setContentComponentUnowned(Component* content)
 {
+	if (contentComponent)
+		contentComponent->removeComponentListener(this);
+
 	contentComponent = content;
 
 	if (contentComponent)
