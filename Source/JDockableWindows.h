@@ -179,7 +179,8 @@ class DockableComponentTab;
 
 /**
 All components displayed by the dockable window system have a DockableComponentWrapper as 
-their parent.
+their parent.  You do not normally directly interact with DockableComponentWrapper 
+components.  Instead add your computer using the add method on a dock.
 */
 class DockableComponentWrapper
 	:
@@ -237,10 +238,8 @@ public:
 
 	Rectangle<int> getTabButtonBounds() const;
 
-	void componentBeingDeleted(Component& component) override
-	{
-		manager.deleteDockableComponent(this);
-	}
+	void componentBeingDeleted(Component&) override;
+
 private:
 	ScopedPointer<DockableComponentTitleBar> titleBar;
 	ScopedPointer<DockableComponentTab> tabButton;
@@ -266,9 +265,11 @@ public:
 	DockableComponentDraggable(DockableComponentWrapper& owner_, DockableWindowManager& manager_);
 	void mouseDrag(const MouseEvent& e) override;
 	void mouseUp(const MouseEvent& e) override;
+	void mouseDown(const MouseEvent& e) override;
 	DockableComponentWrapper & getDockableComponent() const { return owner; }
 	bool isDragging() const { return dragging; }
 private:
+	Point<int> offset;
 	bool dragging{ false };
 	DockableComponentWrapper & owner;
 	DockableWindowManager & manager;

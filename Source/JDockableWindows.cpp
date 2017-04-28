@@ -249,7 +249,6 @@ DockableComponentWrapper::DockableComponentWrapper(DockableWindowManager&manager
 DockableComponentWrapper::~DockableComponentWrapper()
 {
 	contentComponent->removeComponentListener(this);
-	//jassertfalse;
 }
 
 void DockableComponentWrapper::resized()
@@ -329,7 +328,6 @@ void DockableComponentWrapper::setShowTabButton(bool shouldShowTab, int xPos_, b
 {
 	if (shouldShowTab)
 	{
-		DBG("showing tab for " + getWindowTitle());
 		tabButton = new DockableComponentTab(*this, manager);
 		addAndMakeVisible(tabButton);
 		tabXPosition = xPos_;
@@ -337,7 +335,6 @@ void DockableComponentWrapper::setShowTabButton(bool shouldShowTab, int xPos_, b
 	}
 	else
 	{
-		DBG("hiding tab for " + getWindowTitle());
 		tabButton = nullptr;
 	}
 
@@ -352,6 +349,11 @@ Rectangle<int> DockableComponentWrapper::getTabButtonBounds() const
 	return {};
 }
 
+void DockableComponentWrapper::componentBeingDeleted(Component&)
+{
+	manager.deleteDockableComponent(this);
+}
+
 //// //// //// //// //// //// //// //// //// //// //// //// //// //// //// //// 
 
 DockableComponentDraggable::DockableComponentDraggable(DockableComponentWrapper& owner_, DockableWindowManager& manager_) :
@@ -359,6 +361,11 @@ DockableComponentDraggable::DockableComponentDraggable(DockableComponentWrapper&
 	manager(manager_)
 {
 	setMouseCursor(MouseCursor::DraggingHandCursor);
+}
+
+void DockableComponentDraggable::mouseDown(const MouseEvent& e) 
+{
+	offset = e.getScreenPosition();
 }
 
 void DockableComponentDraggable::mouseDrag(const MouseEvent& e)
