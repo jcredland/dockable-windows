@@ -65,7 +65,7 @@ public:
 	/**
 	Your dock should implement this to enable components to be revealed and/or moved to the front.
 	*/
-	virtual void revealComponent(DockableComponentWrapper* dockableComponent) {}
+	virtual void revealComponent(DockableComponentWrapper* /*dockableComponent*/) {}
 private:
 	DockableWindowManager & manager;
 	Component* dockComponent;
@@ -237,7 +237,7 @@ public:
 
 	Rectangle<int> getTabButtonBounds() const;
 
-	void componentBeingDeleted(Component& component) override
+	void componentBeingDeleted(Component& /*component*/) override
 	{
 		manager.deleteDockableComponent(this);
 	}
