@@ -84,7 +84,7 @@ DockBase* DockableWindowManager::getDockUnderScreenPosition(Point<int> position)
 	return nullptr;
 }
 
-void DockableWindowManager::handleComponentDragEnd(DockableComponentWrapper* component, const Point<int> & screenPosition)
+void DockableWindowManager::handleComponentDragEnd(DockableComponentWrapper* component, const Point<int> & screenPosition, const Point<int> & dragOffset)
 {
 	divorceComponentFromParent(component);
 
@@ -103,7 +103,7 @@ void DockableWindowManager::handleComponentDragEnd(DockableComponentWrapper* com
 
     if (!targetDock || !didAttachToDock)
     {
-        createHeavyWeightWindow(component, screenPosition);
+        createHeavyWeightWindow(component, screenPosition - dragOffset);
     }
 
 	currentlyDraggedComponent = nullptr;
@@ -166,7 +166,7 @@ void DockableWindowManager::deleteDockableComponent(DockableComponentWrapper* do
 	dockableComponents.removeObject(dockableComponentWrapper);
 }
 
-void DockableWindowManager::handleComponentDrag(DockableComponentWrapper * componentBeingDragged, Point<int> location, int w, int h)
+void DockableWindowManager::handleComponentDrag(DockableComponentWrapper * componentBeingDragged, Point<int> location, Point<int> dragOffset, int w, int h)
 {
 	if (!transparentDragImageWindow)
 	{
@@ -186,7 +186,7 @@ void DockableWindowManager::handleComponentDrag(DockableComponentWrapper * compo
 		highlightedDock = dock;
 	}
 
-	transparentDragImageWindow->setBounds(location.getX(), location.getY(), w, h);
+	transparentDragImageWindow->setBounds(location.getX() - dragOffset.getX(), location.getY() - dragOffset.getY(), w, h);
 	transparentDragImageWindow->setVisible(true);
 
 	if (componentBeingDragged != currentlyDraggedComponent)
@@ -375,8 +375,7 @@ void DockableComponentDraggable::mouseDrag(const MouseEvent& e)
 {
 	if (dragging || e.getDistanceFromDragStart() > 10)
 	{
-		auto windowPosition = e.getScreenPosition() - dragOffset;
-		manager.handleComponentDrag(&owner, windowPosition, owner.getWidth(), owner.getHeight());
+		manager.handleComponentDrag(&owner, e.getScreenPosition(), dragOffset, owner.getWidth(), owner.getHeight());
 		dragging = true;
 	}
 }
@@ -385,7 +384,7 @@ void DockableComponentDraggable::mouseUp(const MouseEvent& e)
 {
 	manager.clearTargetPosition();
 	auto screenPos = e.getScreenPosition();
-	manager.handleComponentDragEnd(&owner, screenPos - dragOffset);
+	manager.handleComponentDragEnd(&owner, screenPos, dragOffset);
 	dragging = false;
 }
 
