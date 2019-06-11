@@ -57,11 +57,11 @@ DockableWindowManager::TransparentDragImageWindow::TransparentDragImageWindow(Im
 	setOpaque(false);
 }
 
-void DockableWindowManager::createHeavyWeightWindow(DockableComponentWrapper * comp, const Point<int> &screenPosition)
+void DockableWindowManager::createHeavyWeightWindow(DockableComponentWrapper * comp, const Point<int> &windowPosition)
 {
 	auto window = new ResizableWindow(comp->getName(), true);
 	window->setContentNonOwned(comp, true);
-	window->setTopLeftPosition(screenPosition);
+	window->setTopLeftPosition(windowPosition);
 	windows.add(window);
 	window->setVisible(true);
 	window->setConstrainer(&basicConstrainer);
@@ -84,7 +84,7 @@ DockBase* DockableWindowManager::getDockUnderScreenPosition(Point<int> position)
 	return nullptr;
 }
 
-void DockableWindowManager::handleComponentDragEnd(DockableComponentWrapper* component, const Point<int> & screenPosition)
+void DockableWindowManager::handleComponentDragEnd(DockableComponentWrapper* component, const Point<int> & screenPosition, const Point<int> & dragOffset)
 {
 	divorceComponentFromParent(component);
 
@@ -101,8 +101,10 @@ void DockableWindowManager::handleComponentDragEnd(DockableComponentWrapper* com
 	if (targetDock)
 		didAttachToDock = targetDock->attachDockableComponent(component, screenPosition);
 
-	if (!targetDock || !didAttachToDock)
-		createHeavyWeightWindow(component, screenPosition);
+    if (!targetDock || !didAttachToDock)
+    {
+        createHeavyWeightWindow(component, screenPosition - dragOffset);
+    }
 
 	currentlyDraggedComponent = nullptr;
 }
@@ -164,7 +166,7 @@ void DockableWindowManager::deleteDockableComponent(DockableComponentWrapper* do
 	dockableComponents.removeObject(dockableComponentWrapper);
 }
 
-void DockableWindowManager::handleComponentDrag(DockableComponentWrapper * componentBeingDragged, Point<int> location, int w, int h)
+void DockableWindowManager::handleComponentDrag(DockableComponentWrapper * componentBeingDragged, Point<int> location, Point<int> dragOffset, int w, int h)
 {
 	if (!transparentDragImageWindow)
 	{
@@ -184,7 +186,7 @@ void DockableWindowManager::handleComponentDrag(DockableComponentWrapper * compo
 		highlightedDock = dock;
 	}
 
-	transparentDragImageWindow->setBounds(location.getX(), location.getY(), w, h);
+	transparentDragImageWindow->setBounds(location.getX() - dragOffset.getX(), location.getY() - dragOffset.getY(), w, h);
 	transparentDragImageWindow->setVisible(true);
 
 	if (componentBeingDragged != currentlyDraggedComponent)
@@ -366,14 +368,14 @@ DockableComponentDraggable::DockableComponentDraggable(DockableComponentWrapper&
 void DockableComponentDraggable::mouseDown(const MouseEvent& e) 
 {
 	offset = e.getScreenPosition();
+	dragOffset = getMouseXYRelative();
 }
 
 void DockableComponentDraggable::mouseDrag(const MouseEvent& e)
 {
 	if (dragging || e.getDistanceFromDragStart() > 10)
 	{
-		auto windowPosition = e.getScreenPosition();
-		manager.handleComponentDrag(&owner, windowPosition, owner.getWidth(), owner.getHeight());
+		manager.handleComponentDrag(&owner, e.getScreenPosition(), dragOffset, owner.getWidth(), owner.getHeight());
 		dragging = true;
 	}
 }
@@ -381,7 +383,8 @@ void DockableComponentDraggable::mouseDrag(const MouseEvent& e)
 void DockableComponentDraggable::mouseUp(const MouseEvent& e)
 {
 	manager.clearTargetPosition();
-	manager.handleComponentDragEnd(&owner, e.getScreenPosition());
+	auto screenPos = e.getScreenPosition();
+	manager.handleComponentDragEnd(&owner, screenPos, dragOffset);
 	dragging = false;
 }
 
