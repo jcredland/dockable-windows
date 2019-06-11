@@ -57,11 +57,11 @@ DockableWindowManager::TransparentDragImageWindow::TransparentDragImageWindow(Im
 	setOpaque(false);
 }
 
-void DockableWindowManager::createHeavyWeightWindow(DockableComponentWrapper * comp, const Point<int> &screenPosition)
+void DockableWindowManager::createHeavyWeightWindow(DockableComponentWrapper * comp, const Point<int> &windowPosition)
 {
 	auto window = new ResizableWindow(comp->getName(), true);
 	window->setContentNonOwned(comp, true);
-	window->setTopLeftPosition(screenPosition);
+	window->setTopLeftPosition(windowPosition);
 	windows.add(window);
 	window->setVisible(true);
 	window->setConstrainer(&basicConstrainer);
@@ -101,8 +101,10 @@ void DockableWindowManager::handleComponentDragEnd(DockableComponentWrapper* com
 	if (targetDock)
 		didAttachToDock = targetDock->attachDockableComponent(component, screenPosition);
 
-	if (!targetDock || !didAttachToDock)
-		createHeavyWeightWindow(component, screenPosition);
+    if (!targetDock || !didAttachToDock)
+    {
+        createHeavyWeightWindow(component, screenPosition);
+    }
 
 	currentlyDraggedComponent = nullptr;
 }
@@ -366,13 +368,14 @@ DockableComponentDraggable::DockableComponentDraggable(DockableComponentWrapper&
 void DockableComponentDraggable::mouseDown(const MouseEvent& e) 
 {
 	offset = e.getScreenPosition();
+	dragOffset = getMouseXYRelative();
 }
 
 void DockableComponentDraggable::mouseDrag(const MouseEvent& e)
 {
 	if (dragging || e.getDistanceFromDragStart() > 10)
 	{
-		auto windowPosition = e.getScreenPosition();
+		auto windowPosition = e.getScreenPosition() - dragOffset;
 		manager.handleComponentDrag(&owner, windowPosition, owner.getWidth(), owner.getHeight());
 		dragging = true;
 	}
@@ -381,7 +384,8 @@ void DockableComponentDraggable::mouseDrag(const MouseEvent& e)
 void DockableComponentDraggable::mouseUp(const MouseEvent& e)
 {
 	manager.clearTargetPosition();
-	manager.handleComponentDragEnd(&owner, e.getScreenPosition());
+	auto screenPos = e.getScreenPosition();
+	manager.handleComponentDragEnd(&owner, screenPos - dragOffset);
 	dragging = false;
 }
 

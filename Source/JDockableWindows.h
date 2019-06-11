@@ -152,7 +152,7 @@ private:
 	void addDock(DockBase* newDock);
 	void removeDock(DockBase* dockToRemove);
 
-	void createHeavyWeightWindow(DockableComponentWrapper * comp, const Point<int> & screenPosition);
+	void createHeavyWeightWindow(DockableComponentWrapper * comp, const Point<int> & windowPosition);
 
 	/** All the DockableComponentWrapper windows we have on the desktop */
 	OwnedArray<ResizableWindow> windows;
@@ -203,7 +203,7 @@ public:
 		if (contentComponent)
 			return contentComponent->getName();
 
-		return String::empty;
+		return String();
 	}
 
 	void resized() override;
@@ -270,6 +270,7 @@ public:
 	bool isDragging() const { return dragging; }
 private:
 	Point<int> offset;
+	Point<int> dragOffset;
 	bool dragging{ false };
 	DockableComponentWrapper & owner;
 	DockableWindowManager & manager;
